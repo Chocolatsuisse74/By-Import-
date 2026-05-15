@@ -55,3 +55,25 @@ export interface ImportRecord {
   errors: string[];
   createdAt: Date;
 }
+
+export interface WebhookEvent {
+  id: string;
+  type: 'agent_message' | 'lead_created' | 'deal_closed';
+  payload: Record<string, unknown>;
+  timestamp: Date;
+  status: 'pending' | 'delivered' | 'failed';
+  retryCount: number;
+  lastError?: string;
+}
+
+export interface HealthStatus {
+  status: 'healthy' | 'unhealthy' | 'degraded';
+  timestamp: string;
+  uptime: number;
+  services: {
+    name: string;
+    status: string;
+    responseTime: number;
+    error?: string;
+  }[];
+}
