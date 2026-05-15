@@ -6,6 +6,7 @@ export async function parseExcel(
 ): Promise<Record<string, unknown>[]> {
   try {
     const workbook = new Workbook();
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     await workbook.xlsx.load(fileBuffer as any);
 
     const results: Record<string, unknown>[] = [];

@@ -61,7 +61,9 @@ export class MetricsCollector {
       this.incrementGauge('http_requests_active', 1);
 
       const originalEnd = res.end.bind(res);
+      // eslint-disable-next-line @typescript-eslint/no-this-alias
       const self = this;
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       res.end = function (...args: unknown[]): Response {
         const duration = Date.now() - startTime;
 
@@ -73,6 +75,7 @@ export class MetricsCollector {
         self.recordHistogram('http_request_duration_ms', duration);
 
         return originalEnd(...(args as [(() => void) | undefined]));
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       } as any;
 
       next();
