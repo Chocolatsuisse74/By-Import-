@@ -1,0 +1,16 @@
+{
+  "version": 2,
+  "buildCommand": "npm run build",
+  "devCommand": "npm run dev",
+  "installCommand": "npm install",
+  "env": {
+    "DATABASE_URL": "@database_url",
+    "NODE_ENV": "production",
+    "PORT": "3000"
+  },
+  "functions": {
+    "src/index.ts": {
+      "runtime": "nodejs20.x"
+    }
+  }
+}
