@@ -16,10 +16,7 @@ const registerWebhookSchema = z.object({
       (url) => url.startsWith('https://'),
       'Webhook URL must use HTTPS protocol for security'
     )
-    .refine(
-      (url) => url.length <= 2048,
-      'Webhook URL is too long'
-    ),
+    .refine((url) => url.length <= 2048, 'Webhook URL is too long'),
   events: z
     .array(z.enum(['agent_message', 'lead_created', 'deal_closed']))
     .min(1, 'At least one event must be specified'),
@@ -33,10 +30,7 @@ const updateWebhookSchema = z.object({
       (url) => url.startsWith('https://'),
       'Webhook URL must use HTTPS protocol for security'
     )
-    .refine(
-      (url) => url.length <= 2048,
-      'Webhook URL is too long'
-    )
+    .refine((url) => url.length <= 2048, 'Webhook URL is too long')
     .optional(),
   events: z
     .array(z.enum(['agent_message', 'lead_created', 'deal_closed']))
@@ -46,9 +40,7 @@ const updateWebhookSchema = z.object({
 });
 
 const webhookIdParamSchema = z.object({
-  id: z
-    .string()
-    .uuid('Invalid webhook ID format'),
+  id: z.string().uuid('Invalid webhook ID format'),
 });
 
 // Register a new webhook endpoint
@@ -59,7 +51,10 @@ router.post(
     try {
       const { url, events } = req.body as z.infer<typeof registerWebhookSchema>;
 
-      const endpoint = webhookManager.registerEndpoint(url, events as WebhookEvent[]);
+      const endpoint = webhookManager.registerEndpoint(
+        url,
+        events as WebhookEvent[]
+      );
 
       logger.info({ endpoint }, 'Webhook endpoint created');
       res.status(201).json({
@@ -107,31 +102,33 @@ router.get(
       const endpoints = webhookManager.getEndpoints();
       const endpoint = endpoints.find((ep) => ep.id === id);
 
-    if (!endpoint) {
-      return res.status(404).json({ error: 'Webhook not found' });
-    }
+      if (!endpoint) {
+        return res.status(404).json({ error: 'Webhook not found' });
+      }
 
-    res.json({
-      id: endpoint.id,
-      url: endpoint.url,
-      events: endpoint.events,
-      isActive: endpoint.isActive,
-      createdAt: endpoint.createdAt,
-      updatedAt: endpoint.updatedAt,
-    });
-  } catch (error) {
-    logger.error({ error }, 'Failed to fetch webhook');
-    res.status(500).json({ error: 'Failed to fetch webhook' });
+      res.json({
+        id: endpoint.id,
+        url: endpoint.url,
+        events: endpoint.events,
+        isActive: endpoint.isActive,
+        createdAt: endpoint.createdAt,
+        updatedAt: endpoint.updatedAt,
+      });
+    } catch (error) {
+      logger.error({ error }, 'Failed to fetch webhook');
+      res.status(500).json({ error: 'Failed to fetch webhook' });
+    }
   }
-});
+);
 
 // Update webhook endpoint
 router.patch(
   '/:id',
+  validateRequest(webhookIdParamSchema, 'params'),
   validateRequest(updateWebhookSchema, 'body'),
   (req: Request, res: Response) => {
     try {
-      const { id } = req.params;
+      const { id } = req.params as z.infer<typeof webhookIdParamSchema>;
       const updates = req.body as z.infer<typeof updateWebhookSchema>;
 
       const endpoints = webhookManager.getEndpoints();
@@ -169,47 +166,55 @@ router.patch(
 );
 
 // Delete webhook endpoint
-router.delete('/:id', (req: Request, res: Response) => {
-  try {
-    const { id } = req.params;
+router.delete(
+  '/:id',
+  validateRequest(webhookIdParamSchema, 'params'),
+  (req: Request, res: Response) => {
+    try {
+      const { id } = req.params as z.infer<typeof webhookIdParamSchema>;
 
-    if (!webhookManager.unregisterEndpoint(id)) {
-      return res.status(404).json({ error: 'Webhook not found' });
+      if (!webhookManager.unregisterEndpoint(id)) {
+        return res.status(404).json({ error: 'Webhook not found' });
+      }
+
+      logger.info({ id }, 'Webhook endpoint deleted');
+      res.status(204).send();
+    } catch (error) {
+      logger.error({ error }, 'Failed to delete webhook');
+      res.status(500).json({ error: 'Failed to delete webhook' });
     }
-
-    logger.info({ id }, 'Webhook endpoint deleted');
-    res.status(204).send();
-  } catch (error) {
-    logger.error({ error }, 'Failed to delete webhook');
-    res.status(500).json({ error: 'Failed to delete webhook' });
   }
-});
+);
 
 // Test webhook delivery
-router.post('/:id/test', async (req: Request, res: Response) => {
-  try {
-    const { id } = req.params;
-    const endpoints = webhookManager.getEndpoints();
-    const endpoint = endpoints.find((ep) => ep.id === id);
+router.post(
+  '/:id/test',
+  validateRequest(webhookIdParamSchema, 'params'),
+  async (req: Request, res: Response) => {
+    try {
+      const { id } = req.params as z.infer<typeof webhookIdParamSchema>;
+      const endpoints = webhookManager.getEndpoints();
+      const endpoint = endpoints.find((ep) => ep.id === id);
 
-    if (!endpoint) {
-      return res.status(404).json({ error: 'Webhook not found' });
+      if (!endpoint) {
+        return res.status(404).json({ error: 'Webhook not found' });
+      }
+
+      // Emit a test event
+      const testEvent = endpoint.events[0];
+      await webhookManager.emit(testEvent, {
+        test: true,
+        message: 'This is a test webhook delivery',
+        timestamp: new Date().toISOString(),
+      });
+
+      logger.info({ id }, 'Test webhook sent');
+      res.json({ message: 'Test webhook sent successfully' });
+    } catch (error) {
+      logger.error({ error }, 'Failed to send test webhook');
+      res.status(500).json({ error: 'Failed to send test webhook' });
     }
-
-    // Emit a test event
-    const testEvent = endpoint.events[0];
-    await webhookManager.emit(testEvent, {
-      test: true,
-      message: 'This is a test webhook delivery',
-      timestamp: new Date().toISOString(),
-    });
-
-    logger.info({ id }, 'Test webhook sent');
-    res.json({ message: 'Test webhook sent successfully' });
-  } catch (error) {
-    logger.error({ error }, 'Failed to send test webhook');
-    res.status(500).json({ error: 'Failed to send test webhook' });
   }
-});
+);
 
 export default router;
