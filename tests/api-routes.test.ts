@@ -11,8 +11,8 @@ describe('Imports API Routes', () => {
     app = express();
     app.use(express.json());
 
-    // Create a fresh router instance for each test
-    routes = require('../src/api/routes/imports.js').default;
+    // Use the imported router directly
+    routes = importsRouter;
     app.use('/imports', routes);
   });
 

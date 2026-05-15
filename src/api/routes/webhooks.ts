@@ -9,14 +9,46 @@ const webhookManager = getWebhookManager();
 
 // Validation schemas
 const registerWebhookSchema = z.object({
-  url: z.string().url('Invalid webhook URL'),
-  events: z.array(z.enum(['agent_message', 'lead_created', 'deal_closed'])).min(1),
+  url: z
+    .string()
+    .url('Invalid webhook URL')
+    .refine(
+      (url) => url.startsWith('https://'),
+      'Webhook URL must use HTTPS protocol for security'
+    )
+    .refine(
+      (url) => url.length <= 2048,
+      'Webhook URL is too long'
+    ),
+  events: z
+    .array(z.enum(['agent_message', 'lead_created', 'deal_closed']))
+    .min(1, 'At least one event must be specified'),
 });
 
 const updateWebhookSchema = z.object({
-  url: z.string().url('Invalid webhook URL').optional(),
-  events: z.array(z.enum(['agent_message', 'lead_created', 'deal_closed'])).min(1).optional(),
+  url: z
+    .string()
+    .url('Invalid webhook URL')
+    .refine(
+      (url) => url.startsWith('https://'),
+      'Webhook URL must use HTTPS protocol for security'
+    )
+    .refine(
+      (url) => url.length <= 2048,
+      'Webhook URL is too long'
+    )
+    .optional(),
+  events: z
+    .array(z.enum(['agent_message', 'lead_created', 'deal_closed']))
+    .min(1, 'At least one event must be specified')
+    .optional(),
   isActive: z.boolean().optional(),
+});
+
+const webhookIdParamSchema = z.object({
+  id: z
+    .string()
+    .uuid('Invalid webhook ID format'),
 });
 
 // Register a new webhook endpoint
@@ -66,11 +98,14 @@ router.get('/', (_req: Request, res: Response) => {
 });
 
 // Get webhook endpoint by ID
-router.get('/:id', (req: Request, res: Response) => {
-  try {
-    const { id } = req.params;
-    const endpoints = webhookManager.getEndpoints();
-    const endpoint = endpoints.find((ep) => ep.id === id);
+router.get(
+  '/:id',
+  validateRequest(webhookIdParamSchema, 'params'),
+  (req: Request, res: Response) => {
+    try {
+      const { id } = req.params as z.infer<typeof webhookIdParamSchema>;
+      const endpoints = webhookManager.getEndpoints();
+      const endpoint = endpoints.find((ep) => ep.id === id);
 
     if (!endpoint) {
       return res.status(404).json({ error: 'Webhook not found' });
