@@ -16,9 +16,9 @@ import { createCorsManager } from '../middleware/cors.js';
 import { getHealthChecker } from '../middleware/healthCheck.js';
 import { getMetricsCollector } from '../middleware/metrics.js';
 
-export function createApp(dbPool?: any) {
+export function createApp(dbPool?: Record<string, unknown>) {
   const app = express();
-  const config = getConfig();
+  getConfig();
 
   // Initialize advanced middleware
   const corsManager = createCorsManager();

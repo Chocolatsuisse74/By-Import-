@@ -28,10 +28,11 @@ export class HealthChecker {
   private registerDefaultChecks(): void {
     // Database health check
     if (this.dbPool) {
+      const dbPool = this.dbPool;
       this.registerCheck('database', async () => {
         const startTime = Date.now();
         try {
-          const client = await this.dbPool!.connect();
+          const client = await dbPool.connect();
           await client.query('SELECT 1');
           client.release();
 

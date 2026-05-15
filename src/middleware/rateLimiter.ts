@@ -59,7 +59,7 @@ export class RateLimiter {
 
   private checkLimit(key: string, store: Map<string, RateLimitStore>): boolean {
     const now = Date.now();
-    let entry = store.get(key);
+    const entry = store.get(key);
 
     if (!entry || entry.resetTime < now) {
       store.set(key, { count: 1, resetTime: now + this.windowMs });
@@ -87,8 +87,9 @@ export class RateLimiter {
 
   private getUserId(req: Request): string | null {
     // Extract user ID from request (e.g., from JWT token, session, etc.)
-    const userId = (req as any).userId || (req as any).user?.id;
-    return userId || null;
+    const reqWithUser = req as Record<string, unknown>;
+    const userId = (reqWithUser.userId as string | undefined) || (reqWithUser.user as Record<string, unknown>)?.id;
+    return (userId as string) || null;
   }
 
   private getRemaining(key: string, store: Map<string, RateLimitStore>): number {

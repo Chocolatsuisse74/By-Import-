@@ -10,7 +10,7 @@ import {
   UpdateImportJobRequest,
   ImportJobParams,
 } from '../../config/schemas.js';
-import { validateRequest, errorHandler } from '../../middleware/validation.js';
+import { validateRequest } from '../../middleware/validation.js';
 
 const router: Router = express.Router();
 const jobsDB: Map<string, ImportJob> = new Map();

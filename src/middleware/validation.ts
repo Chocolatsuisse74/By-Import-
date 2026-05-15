@@ -102,7 +102,7 @@ export function errorHandler(
  * Removes potentially dangerous characters from inputs
  */
 export function sanitizeInputs(req: Request, _res: Response, next: NextFunction) {
-  const sanitize = (obj: any): any => {
+  const sanitize = (obj: unknown): unknown => {
     if (obj === null || obj === undefined) {
       return obj;
     }
@@ -110,8 +110,12 @@ export function sanitizeInputs(req: Request, _res: Response, next: NextFunction)
     if (typeof obj === 'string') {
       // Remove null bytes and control characters
       return obj
-        .replace(/\0/g, '')
-        .replace(/[\x00-\x1F\x7F]/g, '')
+        .split('')
+        .filter((char) => {
+          const code = char.charCodeAt(0);
+          return code !== 0 && code >= 32 && code !== 127;
+        })
+        .join('')
         .trim();
     }
 
@@ -120,7 +124,7 @@ export function sanitizeInputs(req: Request, _res: Response, next: NextFunction)
     }
 
     if (typeof obj === 'object') {
-      const sanitized: any = {};
+      const sanitized: Record<string, unknown> = {};
       for (const [key, value] of Object.entries(obj)) {
         // Sanitize keys and values
         const sanitizedKey = String(key)
@@ -194,7 +198,7 @@ export function rateLimitMiddleware(
     requestCounts.set(identifier, []);
   }
 
-  const timestamps = requestCounts.get(identifier)!;
+  const timestamps = requestCounts.get(identifier) || [];
   const recentRequests = timestamps.filter((t) => now - t < WINDOW_MS);
 
   if (recentRequests.length >= MAX_REQUESTS_PER_MINUTE) {
