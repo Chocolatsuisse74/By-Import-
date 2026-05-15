@@ -116,7 +116,7 @@ export class HealthChecker {
   }
 
   middleware() {
-    return async (req: Request, res: Response) => {
+    return async (_req: Request, res: Response) => {
       const health = await this.getHealthStatus();
       const statusCode = health.status === 'healthy' ? 200 : 503;
       res.status(statusCode).json(health);

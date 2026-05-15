@@ -16,14 +16,14 @@ import { createCorsManager } from '../middleware/cors.js';
 import { getHealthChecker } from '../middleware/healthCheck.js';
 import { getMetricsCollector } from '../middleware/metrics.js';
 
-export function createApp(_dbPool?: Record<string, unknown>) {
+export function createApp() {
   const app = express();
   getConfig();
 
   // Initialize advanced middleware
   const corsManager = createCorsManager();
   const metricsCollector = getMetricsCollector();
-  const healthChecker = getHealthChecker(_dbPool);
+  const healthChecker = getHealthChecker();
 
   // CORS Configuration
   app.use(corsManager.middleware());
@@ -40,7 +40,7 @@ export function createApp(_dbPool?: Record<string, unknown>) {
   app.use(metricsCollector.requestMiddleware());
 
   // Security Headers (comprehensive set)
-  app.use((req, res, next) => {
+  app.use((_req, res, next) => {
     res.setHeader('X-Content-Type-Options', 'nosniff');
     res.setHeader('X-Frame-Options', 'DENY');
     res.setHeader('X-XSS-Protection', '1; mode=block');

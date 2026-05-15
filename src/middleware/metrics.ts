@@ -62,7 +62,7 @@ export class MetricsCollector {
 
       const originalEnd = res.end.bind(res);
       const self = this;
-      res.end = function (...args: unknown[]) {
+      res.end = function (...args: unknown[]): Response {
         const duration = Date.now() - startTime;
 
         // Decrement active requests
@@ -72,8 +72,8 @@ export class MetricsCollector {
         self.incrementCounter('http_requests_total', 1);
         self.recordHistogram('http_request_duration_ms', duration);
 
-        return originalEnd(...args);
-      };
+        return originalEnd(...(args as [(() => void) | undefined]));
+      } as any;
 
       next();
     };
@@ -161,7 +161,7 @@ export class MetricsCollector {
   }
 
   exportMetrics() {
-    return (req: Request, res: Response) => {
+    return (_req: Request, res: Response) => {
       res.set('Content-Type', 'text/plain; charset=utf-8');
       res.send(this.getMetrics());
     };

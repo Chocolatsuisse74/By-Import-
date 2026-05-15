@@ -6,7 +6,7 @@ export async function parseExcel(
 ): Promise<Record<string, unknown>[]> {
   try {
     const workbook = new Workbook();
-    await workbook.xlsx.load(fileBuffer);
+    await workbook.xlsx.load(fileBuffer as any);
 
     const results: Record<string, unknown>[] = [];
     const worksheet = workbook.worksheets[0];

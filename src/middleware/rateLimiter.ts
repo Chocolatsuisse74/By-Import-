@@ -26,7 +26,7 @@ export class RateLimiter {
   }
 
   middleware() {
-    return (req: Request, res: Response, next: NextFunction) => {
+    return (req: Request, res: Response, next: NextFunction): void => {
       const clientIp = this.getClientIp(req);
       const userId = this.getUserId(req);
 
@@ -35,18 +35,20 @@ export class RateLimiter {
 
       if (!ipAllowed) {
         logger.warn({ ip: clientIp }, 'Rate limit exceeded for IP');
-        return res.status(429).json({
+        res.status(429).json({
           error: 'Too many requests',
           retryAfter: this.getRetryAfter(clientIp, this.ipStore),
         });
+        return;
       }
 
       if (!userAllowed) {
         logger.warn({ userId }, 'Rate limit exceeded for user');
-        return res.status(429).json({
+        res.status(429).json({
           error: 'Too many requests',
-          retryAfter: this.getRetryAfter(userId, this.userStore),
+          retryAfter: this.getRetryAfter(userId || '', this.userStore),
         });
+        return;
       }
 
       res.set('RateLimit-Limit', this.maxRequests.toString());
@@ -82,14 +84,14 @@ export class RateLimiter {
     if (Array.isArray(forwarded)) {
       return forwarded[0].trim();
     }
-    return req.ip || 'unknown';
+    return req.ip || '';
   }
 
   private getUserId(req: Request): string | null {
     // Extract user ID from request (e.g., from JWT token, session, etc.)
-    const reqWithUser = req as Record<string, unknown>;
-    const userId = (reqWithUser.userId as string | undefined) || (reqWithUser.user as Record<string, unknown>)?.id;
-    return (userId as string | null) ?? null;
+    const reqWithUser = req as unknown as Record<string, unknown>;
+    const userId = (reqWithUser.userId as string | undefined) || (reqWithUser.user as Record<string, unknown> | undefined)?.id;
+    return typeof userId === 'string' ? userId : null;
   }
 
   private getRemaining(key: string, store: Map<string, RateLimitStore>): number {
