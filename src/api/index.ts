@@ -8,6 +8,8 @@ import {
   sanitizeInputs,
   requestSizeLimit,
   rateLimitMiddleware,
+  validateContentType,
+  csrfProtectionMiddleware,
 } from '../middleware/validation.js';
 import { getConfig } from '../config/env.js';
 import { createCorsManager } from '../middleware/cors.js';
@@ -26,21 +28,32 @@ export function createApp(dbPool?: any) {
   // CORS Configuration
   app.use(corsManager.middleware());
 
-  // Security Middleware
-  app.use(requestSizeLimit(10)); // 10MB max request size
-  app.use(rateLimitMiddleware);
+  // Security Middleware (in order of importance)
+  app.use(requestSizeLimit(10)); // 10MB max request size - prevent DoS
+  app.use(validateContentType()); // validate content types
+  app.use(rateLimitMiddleware); // rate limiting
   app.use(express.json({ limit: '10mb' }));
-  app.use(sanitizeInputs);
+  app.use(sanitizeInputs); // input sanitization
+  app.use(csrfProtectionMiddleware); // CSRF protection for state-changing requests
 
   // Metrics Collection
   app.use(metricsCollector.requestMiddleware());
 
-  // Security Headers
+  // Security Headers (comprehensive set)
   app.use((req, res, next) => {
     res.setHeader('X-Content-Type-Options', 'nosniff');
     res.setHeader('X-Frame-Options', 'DENY');
     res.setHeader('X-XSS-Protection', '1; mode=block');
-    res.setHeader('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
+    res.setHeader(
+      'Strict-Transport-Security',
+      'max-age=31536000; includeSubDomains'
+    );
+    res.setHeader('Content-Security-Policy', "default-src 'self'");
+    res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
+    res.setHeader(
+      'Permissions-Policy',
+      'geolocation=(), microphone=(), camera=()'
+    );
     next();
   });
 

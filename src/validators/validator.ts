@@ -1,5 +1,4 @@
 import { ValidationRule } from '../types/index.js';
-import { logger } from '../utils/logger.js';
 
 export class DataValidator {
   private rules: ValidationRule[];
@@ -61,10 +60,7 @@ export class DataValidator {
         break;
 
       case 'phone':
-        if (
-          value &&
-          !String(value).match(/^[\d\s\-\+\(\)]+$/)
-        ) {
+        if (value && !String(value).match(/^[\d\s\-+()]+$/)) {
           return rule.message;
         }
         break;
