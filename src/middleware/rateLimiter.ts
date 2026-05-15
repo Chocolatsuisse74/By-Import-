@@ -89,7 +89,7 @@ export class RateLimiter {
     // Extract user ID from request (e.g., from JWT token, session, etc.)
     const reqWithUser = req as Record<string, unknown>;
     const userId = (reqWithUser.userId as string | undefined) || (reqWithUser.user as Record<string, unknown>)?.id;
-    return (userId as string) || null;
+    return (userId as string | null) ?? null;
   }
 
   private getRemaining(key: string, store: Map<string, RateLimitStore>): number {

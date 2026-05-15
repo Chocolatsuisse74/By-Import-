@@ -60,19 +60,20 @@ export class MetricsCollector {
       // Increment active requests
       this.incrementGauge('http_requests_active', 1);
 
-      const originalEnd = res.end;
+      const originalEnd = res.end.bind(res);
+      const self = this;
       res.end = function (...args: unknown[]) {
         const duration = Date.now() - startTime;
 
         // Decrement active requests
-        this.decrementGauge('http_requests_active', 1);
+        self.decrementGauge('http_requests_active', 1);
 
         // Track request metrics
-        this.incrementCounter('http_requests_total', 1);
-        this.recordHistogram('http_request_duration_ms', duration);
+        self.incrementCounter('http_requests_total', 1);
+        self.recordHistogram('http_request_duration_ms', duration);
 
-        originalEnd.apply(res, args);
-      }.bind(this);
+        return originalEnd(...args);
+      };
 
       next();
     };

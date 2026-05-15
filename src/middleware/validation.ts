@@ -139,8 +139,8 @@ export function sanitizeInputs(req: Request, _res: Response, next: NextFunction)
   };
 
   req.body = sanitize(req.body);
-  req.params = sanitize(req.params);
-  req.query = sanitize(req.query);
+  req.params = sanitize(req.params) as Record<string, string>;
+  req.query = sanitize(req.query) as Record<string, string | string[]>;
 
   next();
 }
