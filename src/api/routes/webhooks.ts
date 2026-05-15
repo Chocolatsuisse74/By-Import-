@@ -96,14 +96,15 @@ router.get('/', (_req: Request, res: Response) => {
 router.get(
   '/:id',
   validateRequest(webhookIdParamSchema, 'params'),
-  (req: Request, res: Response) => {
+  (req: Request, res: Response): void => {
     try {
       const { id } = req.params as z.infer<typeof webhookIdParamSchema>;
       const endpoints = webhookManager.getEndpoints();
       const endpoint = endpoints.find((ep) => ep.id === id);
 
       if (!endpoint) {
-        return res.status(404).json({ error: 'Webhook not found' });
+        res.status(404).json({ error: 'Webhook not found' });
+        return;
       }
 
       res.json({
@@ -126,7 +127,7 @@ router.patch(
   '/:id',
   validateRequest(webhookIdParamSchema, 'params'),
   validateRequest(updateWebhookSchema, 'body'),
-  (req: Request, res: Response) => {
+  (req: Request, res: Response): void => {
     try {
       const { id } = req.params as z.infer<typeof webhookIdParamSchema>;
       const updates = req.body as z.infer<typeof updateWebhookSchema>;
@@ -135,7 +136,8 @@ router.patch(
       const endpoint = endpoints.find((ep) => ep.id === id);
 
       if (!endpoint) {
-        return res.status(404).json({ error: 'Webhook not found' });
+        res.status(404).json({ error: 'Webhook not found' });
+        return;
       }
 
       // Update endpoint (in a real scenario, persist to database)
@@ -169,12 +171,13 @@ router.patch(
 router.delete(
   '/:id',
   validateRequest(webhookIdParamSchema, 'params'),
-  (req: Request, res: Response) => {
+  (req: Request, res: Response): void => {
     try {
       const { id } = req.params as z.infer<typeof webhookIdParamSchema>;
 
       if (!webhookManager.unregisterEndpoint(id)) {
-        return res.status(404).json({ error: 'Webhook not found' });
+        res.status(404).json({ error: 'Webhook not found' });
+        return;
       }
 
       logger.info({ id }, 'Webhook endpoint deleted');
@@ -190,14 +193,15 @@ router.delete(
 router.post(
   '/:id/test',
   validateRequest(webhookIdParamSchema, 'params'),
-  async (req: Request, res: Response) => {
+  async (req: Request, res: Response): Promise<void> => {
     try {
       const { id } = req.params as z.infer<typeof webhookIdParamSchema>;
       const endpoints = webhookManager.getEndpoints();
       const endpoint = endpoints.find((ep) => ep.id === id);
 
       if (!endpoint) {
-        return res.status(404).json({ error: 'Webhook not found' });
+        res.status(404).json({ error: 'Webhook not found' });
+        return;
       }
 
       // Emit a test event

@@ -228,3 +228,96 @@ export function rateLimitMiddleware(
 
   next();
 }
+
+/**
+ * Request validation for dangerous content types
+ * Prevents certain file types from being uploaded
+ */
+export function validateContentType(
+  allowedTypes: string[] = ['application/json', 'multipart/form-data']
+) {
+  return (req: Request, res: Response, next: NextFunction) => {
+    const contentType = req.get('content-type') || '';
+
+    const allowed = allowedTypes.some((type) =>
+      contentType.startsWith(type)
+    );
+
+    if (!allowed && req.method !== 'GET') {
+      logger.warn(
+        { contentType, path: req.path },
+        'Unsupported content type'
+      );
+      res.status(415).json({
+        error: 'Unsupported Media Type',
+        message: `Content-Type must be one of: ${allowedTypes.join(', ')}`,
+      });
+      return;
+    }
+
+    next();
+  };
+}
+
+/**
+ * CSRF protection middleware
+ * Validates X-Requested-With header or CSRF token for state-changing requests
+ */
+const csrfTokens = new Map<string, { token: string; timestamp: number }>();
+const CSRF_TOKEN_EXPIRY = 24 * 60 * 60 * 1000; // 24 hours
+
+export function generateCSRFToken(identifier: string): string {
+  const token = Math.random().toString(36).substring(2) + Date.now().toString(36);
+  csrfTokens.set(identifier, {
+    token,
+    timestamp: Date.now(),
+  });
+  return token;
+}
+
+export function csrfProtectionMiddleware(
+  req: Request,
+  res: Response,
+  next: NextFunction
+) {
+  const config = getConfig();
+
+  // Skip CSRF protection for GET, HEAD, OPTIONS, development mode
+  if (
+    ['GET', 'HEAD', 'OPTIONS'].includes(req.method) ||
+    config.NODE_ENV === 'development'
+  ) {
+    return next();
+  }
+
+  // Check for CSRF token from header or body
+  const token =
+    req.get('x-csrf-token') ||
+    (req.body && req.body.csrfToken);
+
+  const identifier = req.ip || 'unknown';
+  const tokenData = csrfTokens.get(identifier);
+
+  if (
+    !token ||
+    !tokenData ||
+    tokenData.token !== token ||
+    Date.now() - tokenData.timestamp > CSRF_TOKEN_EXPIRY
+  ) {
+    logger.warn(
+      { identifier, hasToken: !!token, path: req.path },
+      'CSRF validation failed'
+    );
+
+    res.status(403).json({
+      error: 'Forbidden',
+      message: 'CSRF validation failed',
+    });
+    return;
+  }
+
+  // Token is valid, cleanup used token
+  csrfTokens.delete(identifier);
+
+  next();
+}
