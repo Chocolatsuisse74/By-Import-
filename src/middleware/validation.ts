@@ -13,11 +13,26 @@ export function validateRequest(
 ) {
   return (req: Request, res: Response, next: NextFunction) => {
     try {
-      const data = req[dataType];
+      let data: unknown;
+
+      if (dataType === 'body') {
+        data = req.body;
+      } else if (dataType === 'params') {
+        data = req.params;
+      } else {
+        data = req.query;
+      }
+
       const validated = schema.parse(data);
 
       // Replace with validated data to prevent injection
-      req[dataType] = validated;
+      if (dataType === 'body') {
+        req.body = validated;
+      } else if (dataType === 'params') {
+        req.params = validated as Record<string, string>;
+      } else {
+        req.query = validated as Record<string, string | string[]>;
+      }
       next();
     } catch (error) {
       if (error instanceof ZodError) {

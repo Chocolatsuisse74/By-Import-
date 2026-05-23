@@ -107,6 +107,27 @@ router.put(
         return;
       }
 
+      // Validate numbers are non-negative
+      if (
+        (updates.processedRecords !== undefined && updates.processedRecords < 0) ||
+        (updates.failedRecords !== undefined && updates.failedRecords < 0)
+      ) {
+        res.status(400).json({ error: 'Record counts cannot be negative' });
+        return;
+      }
+
+      // Validate total processed doesn't exceed total records
+      const processedRecords = updates.processedRecords ?? job.processedRecords;
+      const failedRecords = updates.failedRecords ?? job.failedRecords;
+      const totalRecords = job.totalRecords;
+
+      if (processedRecords + failedRecords > totalRecords) {
+        res.status(400).json({
+          error: 'Total processed and failed records exceed total records',
+        });
+        return;
+      }
+
       // Only allow updating specific fields
       const updated: ImportJob = {
         ...job,
